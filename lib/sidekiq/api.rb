@@ -27,7 +27,7 @@ module Sidekiq
 
     def queues
       Sidekiq.redis do |conn|
-        queues = conn.smembers('queues')
+        queues = conn.smembers('queues'.freeze)
 
         lengths = conn.pipelined do
           queues.each do |queue|
@@ -118,7 +118,7 @@ module Sidekiq
     include Enumerable
 
     def self.all
-      Sidekiq.redis {|c| c.smembers('queues') }.sort.map {|q| Sidekiq::Queue.new(q) }
+      Sidekiq.redis {|c| c.smembers('queues'.freeze) }.sort.map {|q| Sidekiq::Queue.new(q) }
     end
 
     attr_reader :name
@@ -174,7 +174,7 @@ module Sidekiq
       Sidekiq.redis do |conn|
         conn.multi do
           conn.del(@rname)
-          conn.srem("queues", name)
+          conn.srem("queues".freeze, name)
         end
       end
     end
@@ -382,7 +382,7 @@ module Sidekiq
     end
 
     def size
-      Sidekiq.redis {|c| c.zcard(name) }
+      Sidekiq.redis { |c| c.zcard(name) }
     end
 
     def clear
@@ -411,7 +411,7 @@ module Sidekiq
         range_start = page * page_size + offset_size
         range_end   = page * page_size + offset_size + (page_size - 1)
         elements = Sidekiq.redis do |conn|
-          conn.zrange name, range_start, range_end, :with_scores => true
+          conn.zrange name, range_start, range_end, with_scores: true
         end
         break if elements.empty?
         page -= 1
@@ -616,6 +616,7 @@ module Sidekiq
   #   'queues' => ['default', 'low'],
   #   'busy' => 10,
   #   'beat' => <last heartbeat>,
+  #   'identity' => <unique string identifying the process>,
   # }
   class Process
     def initialize(hash)
@@ -655,7 +656,7 @@ module Sidekiq
     end
 
     def identity
-      @id ||= "#{self['hostname']}:#{self['pid']}"
+      self['identity']
     end
   end
 

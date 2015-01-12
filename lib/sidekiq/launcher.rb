@@ -17,16 +17,19 @@ module Sidekiq
     attr_reader :manager, :poller, :fetcher
 
     def initialize(options)
-      @manager = Sidekiq::Manager.new_link options
+      @condvar = Celluloid::Condition.new
+      @manager = Sidekiq::Manager.new_link(@condvar, options)
       @poller = Sidekiq::Scheduled::Poller.new_link
-      @fetcher = Sidekiq::Fetcher.new_link @manager, options
+      @fetcher = Sidekiq::Fetcher.new_link(@manager, options)
       @manager.fetcher = @fetcher
       @done = false
       @options = options
     end
 
     def actor_died(actor, reason)
-      return if @done
+      # https://github.com/mperham/sidekiq/issues/2057#issuecomment-66485477
+      return if @done || !reason
+
       Sidekiq.logger.warn("Sidekiq died due to the following error, cannot recover, process exiting")
       handle_exception(reason)
       exit(1)
@@ -49,7 +52,8 @@ module Sidekiq
         poller.terminate if poller.alive?
 
         manager.async.stop(:shutdown => true, :timeout => @options[:timeout])
-        manager.wait(:shutdown) if manager.alive?
+        @condvar.wait
+        manager.terminate
 
         # Requeue everything in case there was a worker who grabbed work while stopped
         # This call is a no-op in Sidekiq but necessary for Sidekiq Pro.
@@ -71,6 +75,7 @@ module Sidekiq
         'concurrency' => @options[:concurrency],
         'queues' => @options[:queues].uniq,
         'labels' => Sidekiq.options[:labels],
+        'identity' => identity,
       }
       # this data doesn't change so dump it to a string
       # now so we don't need to dump it every heartbeat.

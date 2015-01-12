@@ -1,4 +1,5 @@
 require 'socket'
+require 'securerandom'
 require 'sidekiq/exception_handler'
 require 'sidekiq/core_ext'
 
@@ -14,7 +15,7 @@ module Sidekiq
     def watchdog(last_words)
       yield
     rescue Exception => ex
-      handle_exception(ex, { :context => last_words })
+      handle_exception(ex, { context: last_words })
       raise ex
     end
 
@@ -30,8 +31,12 @@ module Sidekiq
       ENV['DYNO'] || Socket.gethostname
     end
 
+    def process_nonce
+      @@process_nonce ||= SecureRandom.hex(6)
+    end
+
     def identity
-      @@identity ||= "#{hostname}:#{$$}"
+      @@identity ||= "#{hostname}:#{$$}:#{process_nonce}"
     end
 
     def fire_event(event)
@@ -39,7 +44,7 @@ module Sidekiq
         begin
           block.call
         rescue => ex
-          handle_exception(ex, { :event => event })
+          handle_exception(ex, { event: event })
         end
       end
     end

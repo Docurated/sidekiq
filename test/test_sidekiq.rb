@@ -1,5 +1,5 @@
 # encoding: utf-8
-require 'helper'
+require_relative 'helper'
 
 class TestSidekiq < Sidekiq::Test
   describe 'json processing' do
@@ -52,6 +52,18 @@ class TestSidekiq < Sidekiq::Test
       end
 
       assert_equal 2, Sidekiq.options[:lifecycle_events][:startup].first.call
+    end
+  end
+
+  describe 'default_worker_options' do
+    before do
+      @old_options = Sidekiq.default_worker_options
+    end
+    after  { Sidekiq.default_worker_options = @old_options }
+
+    it 'stringify keys' do
+      Sidekiq.default_worker_options = { queue: 'cat'}
+      assert_equal 'cat', Sidekiq.default_worker_options['queue']
     end
   end
 end

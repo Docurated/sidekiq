@@ -3,6 +3,20 @@ Sidekiq Pro Changelog
 
 Please see [http://sidekiq.org/pro](http://sidekiq.org/pro) for more details and how to buy.
 
+
+2.0.0 (see mperham/sidekiq#2130 for progress)
+-----------
+
+- See [[Pro-2.0-Upgrade.md]] for thorough release notes.
+
+1.9.2
+-----------
+
+- As of 1/1/2015, Sidekiq Pro is hosted on a new dedicated server.
+  Happy new year and let's hope for 100% uptime!
+- Fix bug in reliable\_fetch where jobs could be duplicated if a Sidekiq
+  process crashed and you were using weighted queues. [#2120]
+
 1.9.1
 -----------
 

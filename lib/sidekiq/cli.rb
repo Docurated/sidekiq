@@ -1,3 +1,4 @@
+# encoding: utf-8
 $stdout.sync = true
 
 require 'yaml'
@@ -106,17 +107,6 @@ module Sidekiq
          sss }
     end
 
-    private
-
-    def print_banner
-      # Print logo and banner for development
-      if environment == 'development' && $stdout.tty?
-        puts "\e[#{31}m"
-        puts Sidekiq::CLI.banner
-        puts "\e[0m"
-      end
-    end
-
     def handle_signal(sig)
       Sidekiq.logger.debug "Got #{sig} signal"
       case sig
@@ -145,6 +135,17 @@ module Sidekiq
             Sidekiq.logger.warn "<no backtrace available>"
           end
         end
+      end
+    end
+
+    private
+
+    def print_banner
+      # Print logo and banner for development
+      if environment == 'development' && $stdout.tty?
+        puts "\e[#{31}m"
+        puts Sidekiq::CLI.banner
+        puts "\e[0m"
       end
     end
 
@@ -195,9 +196,8 @@ module Sidekiq
       @environment = cli_env || ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development'
     end
 
-    def die(code)
-      exit(code)
-    end
+    alias_method :die, :exit
+    alias_method :☠, :exit
 
     def setup_options(args)
       opts = parse_options(args)

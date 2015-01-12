@@ -45,8 +45,8 @@ module Sidekiq
     end
 
     post "/busy" do
-      if params['hostname']
-        p = Sidekiq::Process.new('hostname' => params["hostname"], 'pid' => params['pid'])
+      if params['identity']
+        p = Sidekiq::Process.new('identity' => params['identity'])
         p.quiet! if params[:quiet]
         p.stop! if params[:stop]
       else
@@ -69,7 +69,7 @@ module Sidekiq
       @name = params[:name]
       @queue = Sidekiq::Queue.new(@name)
       (@current_page, @total_size, @messages) = page("queue:#{@name}", params[:page], @count)
-      @messages = @messages.map {|msg| Sidekiq::Job.new(msg, @name) }
+      @messages = @messages.map { |msg| Sidekiq::Job.new(msg, @name) }
       erb :queue
     end
 
@@ -85,8 +85,8 @@ module Sidekiq
 
     get '/morgue' do
       @count = (params[:count] || 25).to_i
-      (@current_page, @total_size, @dead) = page("dead", params[:page], @count, :reverse => true)
-      @dead = @dead.map {|msg, score| Sidekiq::SortedEntry.new(nil, score, msg) }
+      (@current_page, @total_size, @dead) = page("dead", params[:page], @count, reverse: true)
+      @dead = @dead.map { |msg, score| Sidekiq::SortedEntry.new(nil, score, msg) }
       erb :morgue
     end
 
@@ -128,7 +128,7 @@ module Sidekiq
     get '/retries' do
       @count = (params[:count] || 25).to_i
       (@current_page, @total_size, @retries) = page("retry", params[:page], @count)
-      @retries = @retries.map {|msg, score| Sidekiq::SortedEntry.new(nil, score, msg) }
+      @retries = @retries.map { |msg, score| Sidekiq::SortedEntry.new(nil, score, msg) }
       erb :retries
     end
 
@@ -167,7 +167,7 @@ module Sidekiq
     get '/scheduled' do
       @count = (params[:count] || 25).to_i
       (@current_page, @total_size, @scheduled) = page("schedule", params[:page], @count)
-      @scheduled = @scheduled.map {|msg, score| Sidekiq::SortedEntry.new(nil, score, msg) }
+      @scheduled = @scheduled.map { |msg, score| Sidekiq::SortedEntry.new(nil, score, msg) }
       erb :scheduled
     end
 
@@ -205,12 +205,16 @@ module Sidekiq
     REDIS_KEYS = %w(redis_version uptime_in_days connected_clients used_memory_human used_memory_peak_human)
 
     get '/dashboard/stats' do
+      redirect "#{root_path}stats"
+    end
+
+    get '/stats' do
       sidekiq_stats = Sidekiq::Stats.new
       queue         = Sidekiq::Queue.new
-      redis_stats   = redis_info.select{ |k, v| REDIS_KEYS.include? k }
+      redis_stats   = redis_info.select { |k, v| REDIS_KEYS.include? k }
 
       content_type :json
-      Sidekiq.dump_json({
+      Sidekiq.dump_json(
         sidekiq: {
           processed:  sidekiq_stats.processed,
           failed:     sidekiq_stats.failed,
@@ -219,10 +223,19 @@ module Sidekiq
           scheduled:  sidekiq_stats.scheduled_size,
           retries:    sidekiq_stats.retry_size,
           dead:       sidekiq_stats.dead_size,
-          default_latency: queue.latency,
+          default_latency: queue.latency
         },
         redis: redis_stats
-      })
+      )
+    end
+
+    get '/stats/queues' do
+      stats = Sidekiq::Stats.new
+
+      content_type :json
+      Sidekiq.dump_json(
+        stats.queues
+      )
     end
 
     private

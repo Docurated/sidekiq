@@ -1,5 +1,5 @@
 # encoding: utf-8
-require 'helper'
+require_relative 'helper'
 require 'sidekiq/scheduled'
 require 'sidekiq/middleware/server/retry_jobs'
 
@@ -110,11 +110,13 @@ class TestRetry < Sidekiq::Test
       c = nil
       assert_raises RuntimeError do
         handler.call(worker, msg, 'default') do
-          c = caller(0)[0..3]; raise "kerblammo!"
+          c = caller(0)[0...3]; raise "kerblammo!"
         end
       end
       assert msg["error_backtrace"]
       assert_equal c, msg["error_backtrace"]
+      assert_equal 3, c.size
+      assert_equal 3, msg["error_backtrace"].size
     end
 
     it 'handles a new failed message' do

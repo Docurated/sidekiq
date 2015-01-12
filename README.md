@@ -24,7 +24,7 @@ the same CPU and perform the same amount of work.
 Requirements
 -----------------
 
-I test with the latest MRI (2.1, 2.0) and JRuby versions (1.7).  Other versions/VMs
+I test with the latest MRI (2.2, 2.1 and 2.0) and JRuby versions (1.7).  Other versions/VMs
 are untested but might work fine.  MRI 1.9 is no longer supported.
 
 All Rails releases starting from 3.2 are officially supported.
@@ -41,7 +41,7 @@ Installation
 Getting Started
 -----------------
 
-See the [sidekiq home page](http://mperham.github.com/sidekiq) for the simple 3-step process.
+See the [sidekiq home page](http://sidekiq.org) for the simple 3-step process.
 You can watch [Railscast #366](http://railscasts.com/episodes/366-sidekiq) to see Sidekiq in action.  If you do everything right, you should see this: 
 
 ![Web UI](https://github.com/mperham/sidekiq/raw/master/examples/web-ui.png)
@@ -91,4 +91,4 @@ Please see [LICENSE](https://github.com/mperham/sidekiq/blob/master/LICENSE) for
 Author
 -----------------
 
-Mike Perham, [@mperham](https://twitter.com/mperham) / [@sidekiq](https://twitter.com/sidekiq), [http://mikeperham.com](http://mikeperham.com) / [http://www.contribsys.com](http://www.contribsys.com)
+Mike Perham, [@mperham](https://twitter.com/mperham) / [@sidekiq](https://twitter.com/sidekiq), [http://www.mikeperham.com](http://www.mikeperham.com) / [http://www.contribsys.com](http://www.contribsys.com)

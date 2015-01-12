@@ -21,12 +21,14 @@ module Sidekiq
     attr_accessor :fetcher
 
     SPIN_TIME_FOR_GRACEFUL_SHUTDOWN = 1
+    JVM_RESERVED_SIGNALS = ['USR1', 'USR2'] # Don't Process#kill if we get these signals via the API
 
-    def initialize(options={})
+    def initialize(condvar, options={})
       logger.debug { options.inspect }
       @options = options
       @count = options[:concurrency] || 25
       @done_callback = nil
+      @finished = condvar
 
       @in_progress = {}
       @threads = {}
@@ -46,7 +48,7 @@ module Sidekiq
 
         @done = true
 
-        logger.info { "Shutting down #{@ready.size} quiet workers" }
+        logger.info { "Terminating #{@ready.size} quiet workers" }
         @ready.each { |x| x.terminate if x.alive? }
         @ready.clear
 
@@ -158,7 +160,13 @@ module Sidekiq
           end
         end
 
-        ::Process.kill(msg, $$) if msg
+        return unless msg
+
+        if JVM_RESERVED_SIGNALS.include?(msg)
+          Sidekiq::CLI.instance.handle_signal(msg)
+        else
+          ::Process.kill(msg, $$)
+        end
       rescue => e
         # ignore all redis/network issues
         logger.error("heartbeat: #{e.message}")
@@ -183,7 +191,7 @@ module Sidekiq
             end
           end
 
-          signal_shutdown
+          @finished.signal
         end
       end
     end
@@ -204,11 +212,7 @@ module Sidekiq
 
     def shutdown
       requeue
-      signal_shutdown
-    end
-
-    def signal_shutdown
-      after(0) { signal(:shutdown) }
+      @finished.signal
     end
 
     def requeue

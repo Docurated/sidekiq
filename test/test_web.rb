@@ -1,4 +1,4 @@
-require 'helper'
+require_relative 'helper'
 require 'sidekiq'
 require 'sidekiq/web'
 require 'rack/test'
@@ -50,17 +50,23 @@ class TestWeb < Sidekiq::Test
       end
 
       it 'can quiet a process' do
-        assert_nil Sidekiq.redis { |c| c.lpop "host:pid-signals" }
-        post '/busy', 'quiet' => '1', 'hostname' => 'host', 'pid' => 'pid'
+        identity = 'identity'
+        signals_key = "#{identity}-signals"
+
+        assert_nil Sidekiq.redis { |c| c.lpop signals_key }
+        post '/busy', 'quiet' => '1', 'identity' => identity
         assert_equal 302, last_response.status
-        assert_equal 'USR1', Sidekiq.redis { |c| c.lpop "host:pid-signals" }
+        assert_equal 'USR1', Sidekiq.redis { |c| c.lpop signals_key }
       end
 
       it 'can stop a process' do
-        assert_nil Sidekiq.redis { |c| c.lpop "host:pid-signals" }
-        post '/busy', 'stop' => '1', 'hostname' => 'host', 'pid' => 'pid'
+        identity = 'identity'
+        signals_key = "#{identity}-signals"
+
+        assert_nil Sidekiq.redis { |c| c.lpop signals_key }
+        post '/busy', 'stop' => '1', 'identity' => identity
         assert_equal 302, last_response.status
-        assert_equal 'TERM', Sidekiq.redis { |c| c.lpop "host:pid-signals" }
+        assert_equal 'TERM', Sidekiq.redis { |c| c.lpop signals_key }
       end
     end
 
@@ -352,6 +358,14 @@ class TestWeb < Sidekiq::Test
       end
     end
 
+    describe 'dashboard/stats' do
+      it 'redirects to stats' do
+        get '/dashboard/stats'
+        assert_equal 302, last_response.status
+        assert_equal 'http://example.org/stats', last_response.header['Location']
+      end
+    end
+
     describe 'stats' do
       include Sidekiq::Util
 
@@ -359,12 +373,13 @@ class TestWeb < Sidekiq::Test
         Sidekiq.redis do |conn|
           conn.set("stat:processed", 5)
           conn.set("stat:failed", 2)
+          conn.sadd("queues", "default")
         end
         2.times { add_retry }
         3.times { add_scheduled }
         4.times { add_worker }
 
-        get '/dashboard/stats'
+        get '/stats'
         @response = Sidekiq.load_json(last_response.body)
       end
 
@@ -426,6 +441,30 @@ class TestWeb < Sidekiq::Test
         it 'reports memory peak' do
           assert_includes @response["redis"].keys, "used_memory_peak_human"
         end
+      end
+    end
+
+    describe 'stats/queues' do
+      include Sidekiq::Util
+
+      before do
+        Sidekiq.redis do |conn|
+          conn.set("stat:processed", 5)
+          conn.set("stat:failed", 2)
+          conn.sadd("queues", "default")
+          conn.sadd("queues", "queue2")
+        end
+        2.times { add_retry }
+        3.times { add_scheduled }
+        4.times { add_worker }
+
+        get '/stats/queues'
+        @response = Sidekiq.load_json(last_response.body)
+      end
+
+      it 'reports the queue depth' do
+        assert_equal 0, @response["default"]
+        assert_equal 0, @response["queue2"]
       end
     end
 
