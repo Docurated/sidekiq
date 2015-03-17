@@ -10,6 +10,7 @@ module Sidekiq
   class Fetcher
     include Util
     include Actor
+    task_class TaskThread
 
     TIMEOUT = 1
 

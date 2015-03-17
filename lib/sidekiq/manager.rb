@@ -14,6 +14,7 @@ module Sidekiq
   class Manager
     include Util
     include Actor
+    task_class TaskThread
     trap_exit :processor_died
 
     attr_reader :ready
